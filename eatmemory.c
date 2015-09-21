@@ -11,6 +11,9 @@
 #include <ctype.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <errno.h>
+
+int swappable = 0;
 
 #ifdef _SC_PHYS_PAGES
 size_t getTotalSystemMemory(){
@@ -34,6 +37,15 @@ bool eat(long total,int chunk){
             return false;
         }
 		memset(buffer,0,chunk);
+
+        if (!swappable){
+            printf("Lock the requested memory address\n");
+            // Lock the requested memory address
+            int ret = mlock(buffer, chunk);
+            if (ret<0) {
+                fprintf(stderr, "mlock() failure: error(%s)\n", strerror(errno));
+            }
+        }
 	}
     return true;
 }
@@ -49,7 +61,8 @@ int main(int argc, char *argv[]){
     for(i=0;i<argc;i++){
         char *arg=argv[i];
         if(strcmp(arg, "-h")==0 || strcmp(arg,"-?")==0  || argc==1){
-            printf("Usage: eatmemory <size>\n");
+            printf("Usage: eatmemory [-s] <size>\n");
+            printf("-s: swappable\n");
             printf("Size can be specified in megabytes or gigabytes in the following way:\n");
             printf("#          # Bytes      example: 1024\n");
             printf("#M         # Megabytes  example: 15M\n");
@@ -58,6 +71,9 @@ int main(int argc, char *argv[]){
             printf("#%%         # Percent    example: 50%%\n");
 #endif            
             printf("\n");
+            break;
+        }else if(!strcmp(arg, "-s")){
+            swappable = 1;
         }else if(i>0){
             int len=strlen(arg);
             char unit=arg[len - 1];
@@ -89,6 +105,6 @@ int main(int argc, char *argv[]){
             }
         }
     }
-
+    return 0;
 }
 
